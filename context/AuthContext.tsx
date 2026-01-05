@@ -8,6 +8,7 @@ interface AuthContextType {
   user: User | null;
   profile: Profile | null;
   loading: boolean;
+  isPasswordRecovery: boolean;
   signOut: () => Promise<void>;
   refreshProfile: () => Promise<void>;
   resetPassword: (email: string) => Promise<{ error: any }>;
@@ -21,6 +22,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [user, setUser] = useState<User | null>(null);
   const [profile, setProfile] = useState<Profile | null>(null);
   const [loading, setLoading] = useState(true);
+  const [isPasswordRecovery, setIsPasswordRecovery] = useState(false);
 
   const fetchProfile = async (currentUser: User) => {
     try {
@@ -31,7 +33,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         .maybeSingle();
       
       if (error) {
-        // Manejo silencioso de error si la tabla no está lista o hay problemas de permisos
         console.warn('Error fetching profile, using fallback data.');
         const fallbackProfile: Profile = {
           id: currentUser.id,
@@ -46,15 +47,14 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       } else if (data) {
         setProfile(data as Profile);
       } else {
-        // Perfil no encontrado, crear fallback temporal
         setProfile({
-            id: currentUser.id,
-            email: currentUser.email,
-            first_name: currentUser.user_metadata?.first_name || 'Usuario',
-            last_name: currentUser.user_metadata?.last_name || '',
-            phone_number: currentUser.user_metadata?.phone_number,
-            role: 'client',
-            points: 0
+          id: currentUser.id,
+          email: currentUser.email,
+          first_name: currentUser.user_metadata?.first_name || 'Usuario',
+          last_name: currentUser.user_metadata?.last_name || '',
+          phone_number: currentUser.user_metadata?.phone_number,
+          role: 'client',
+          points: 0
         });
       }
     } catch (err) {
@@ -63,7 +63,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   useEffect(() => {
-    // 1. Verificar sesión activa al inicio
     const initAuth = async () => {
       const { data: { session } } = await supabase.auth.getSession();
       setSession(session);
@@ -84,11 +83,25 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       console.log('Auth Event:', event);
       
       if (event === 'PASSWORD_RECOVERY') {
+        // Verificar si ESTA pestaña fue la que solicitó la recuperación
+        const thisTabRequestedRecovery = sessionStorage.getItem('password_recovery_requested');
+        
+        if (thisTabRequestedRecovery) {
+          // Esta pestaña SOLICITÓ la recuperación - NO redirigir
+          // Solo limpiar la bandera y quedarse donde está
+          console.log('Password recovery event ignored - this tab requested the recovery');
+          sessionStorage.removeItem('password_recovery_requested');
+          // No hacer nada más, el usuario puede cerrar esta pestaña manualmente
+          return;
+        }
+        
+        // Esta pestaña viene del LINK del correo - SÍ redirigir
+        console.log('Password recovery from email link - redirecting to update-password');
         setSession(session);
-        // Redirigir específicamente a la ruta de actualización
-        // setTimeout asegura que esto ocurra después de que el Router se monte
+        setIsPasswordRecovery(true);
+        
         setTimeout(() => {
-           window.location.hash = '/update-password';
+          window.location.hash = '/update-password';
         }, 100);
         return; 
       }
@@ -112,6 +125,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setProfile(null);
     setSession(null);
     setUser(null);
+    setIsPasswordRecovery(false);
     window.location.hash = '/login';
   };
 
@@ -120,7 +134,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   const resetPassword = async (email: string) => {
-    // Redirigir al origen actual (sea localhost o Vercel)
     const redirectTo = window.location.origin; 
     
     return await supabase.auth.resetPasswordForEmail(email, {
@@ -129,7 +142,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   const updatePassword = async (password: string) => {
-    return await supabase.auth.updateUser({ password });
+    const result = await supabase.auth.updateUser({ password });
+    if (!result.error) {
+      setIsPasswordRecovery(false);
+    }
+    return result;
   };
 
   return (
@@ -137,7 +154,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       session, 
       user, 
       profile, 
-      loading, 
+      loading,
+      isPasswordRecovery,
       signOut, 
       refreshProfile, 
       resetPassword,
