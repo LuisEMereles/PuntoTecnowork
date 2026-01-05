@@ -18,6 +18,11 @@ export const ForgotPassword: React.FC = () => {
     try {
       const { error } = await resetPassword(email);
       if (error) throw error;
+      
+      // Marcar esta pestaña como la que SOLICITÓ la recuperación
+      // Así cuando llegue el evento PASSWORD_RECOVERY, esta pestaña NO redirigirá
+      sessionStorage.setItem('password_recovery_requested', 'true');
+      
       setSuccess(true);
     } catch (err: any) {
       setError(err.message || 'Error al enviar el correo de recuperación.');
