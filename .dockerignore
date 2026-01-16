@@ -1,0 +1,61 @@
+# .dockerignore para EasyPanel
+
+# Dependencias
+node_modules
+npm-debug.log
+yarn-error.log
+yarn-debug.log
+pnpm-debug.log
+
+# Archivos de build
+.next
+out
+build
+dist
+.cache
+
+# Archivos de test
+coverage
+.nyc_output
+*.test.js
+*.spec.js
+
+# Archivos de configuración local
+.env
+.env.local
+.env.*.local
+.env.development.local
+.env.test.local
+.env.production.local
+
+# Archivos de IDE y editor
+.vscode
+.idea
+*.swp
+*.swo
+*~
+.DS_Store
+
+# Archivos de Git
+.git
+.gitignore
+.gitattributes
+.gitmodules
+
+# Archivos de CI/CD
+.github
+.gitlab-ci.yml
+.travis.yml
+.circleci
+.vercel
+
+# Otros archivos
+Dockerfile
+docker-compose.yml
+docker-compose.*.yml
+.dockerignore
+
+# Documentación
+README.md
+LICENSE
+CHANGELOG.md
