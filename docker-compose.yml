@@ -1,0 +1,21 @@
+version: '3.8'
+
+services:
+  vite_react_shadcn_ts:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: vite_react_shadcn_ts
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    environment:
+      - NODE_ENV=production
+    env_file:
+      - .env
+    networks:
+      - easypanel-network
+
+networks:
+  easypanel-network:
+    external: true
