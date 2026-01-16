@@ -1,0 +1,21 @@
+# nixpacks.toml - Configuración explícita para EasyPanel
+
+# IMPORTANTE: Forzamos el uso de Node.js.
+# Esto evita que Nixpacks detecte erróneamente archivos de Deno o Supabase (como 'supabase/functions')
+# e intente ejecutarlos como un backend, lo cual causa errores en el puerto 8000.
+providers = ["node"]
+
+[phases.build]
+# 1. Detecta y usa el gestor de paquetes correcto (npm, yarn, o pnpm) para instalar dependencias.
+#    Para pnpm, usamos --no-frozen-lockfile para permitir que el lockfile se actualice si
+#    'package.json' ha cambiado (ej. al añadir la dependencia 'serve'). Esto previene errores de build.
+# 2. Ejecuta el script 'build' para crear la carpeta de salida (ej. /dist, /build).
+cmds = [
+    "if [ -f pnpm-lock.yaml ]; then pnpm install --no-frozen-lockfile; elif [ -f yarn.lock ]; then yarn install; else npm install; fi",
+    "if [ -f pnpm-lock.yaml ]; then pnpm run build; elif [ -f yarn.lock ]; then yarn run build; else npm run build; fi"
+]
+
+# Fase de inicio
+[start]
+# Ejecuta el script 'start' que definimos en package.json (ej. serve -s dist).
+cmd = "if [ -f pnpm-lock.yaml ]; then pnpm start; elif [ -f yarn.lock ]; then yarn start; else npm start; fi"
